@@ -1,131 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>SPxWC e-BIB Generator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<title>Virtual Run e-BIB</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
-      text-align: center;
-    }
+<!-- Google Fonts: Anton -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 
-    h1 {
-      margin-bottom: 10px;
-    }
-
-    select, button {
-      padding: 10px;
-      font-size: 16px;
-      margin: 10px 5px;
-    }
-
-    canvas {
-      display: block;
-      margin: 20px auto;
-      max-width: 100%;
-      border: 1px solid #ccc;
-      background: white;
-    }
-  </style>
+<style>
+body { 
+  font-family: Arial, sans-serif; 
+  background: #f4f4f4; 
+  text-align: center; 
+  padding: 20px; 
+}
+h1 { 
+  color: #2a2a2a; 
+  font-family: 'Anton', sans-serif; 
+}
+input, button { 
+  padding: 10px; 
+  font-size: 16px; 
+  margin: 10px 5px; 
+  max-width: 400px; 
+  font-family: 'Anton', sans-serif;
+}
+canvas { 
+  margin-top: 20px; 
+  max-width: 100%; 
+  border-radius: 10px; 
+  box-shadow: 0 0 10px rgba(0,0,0,0.2); 
+}
+a.download { 
+  display: inline-block; 
+  margin-top: 10px; 
+  padding: 10px 20px; 
+  background: #4CAF50; 
+  color: white; 
+  text-decoration: none; 
+  border-radius: 5px; 
+  font-family: 'Anton', sans-serif;
+}
+a.download:hover { 
+  background: #45a049; 
+}
+</style>
 </head>
-
 <body>
 
-  <h1>SPxWC e-BIB Generator</h1>
+<h1>Get Your e-BIB</h1>
+<p>Enter your full name</p>
 
-  <select id="runnerSelect">
-    <option value="">— Select Runner —</option>
-  </select>
+<input id="nameInput" placeholder="Full Name">
+<br>
+<button id="generateBtn">Generate</button>
+<button id="viewBtn">View e-BIB</button>
+<a id="downloadLink" class="download" style="display:none">Download e-BIB</a>
 
-  <br />
+<canvas id="canvas" width="1080" height="1350" style="display:none;"></canvas>
 
-  <button onclick="generateBib()">Generate</button>
-  <button onclick="downloadBib()">Download</button>
+<script>
+// --- VARIABLES ---
+let participants = [];
+let template = new Image();
 
-  <canvas id="bibCanvas"></canvas>
+// Load participants.json
+fetch("data/participants.json")
+  .then(res => res.json())
+  .then(data => participants = data)
+  .catch(err => alert("Error loading participant list: " + err));
 
-  <script>
-    /* =============================
-       MASTERLIST (EDIT THIS ONLY)
-    ============================== */
-    const runners = [
-      { first: "Alice Cindy", last: "Trajera", bib: "1" },
-      { first: "Aljon", last: "Lodovice", bib: "2" },
-      { first: "Marc", last: "Yu", bib: "3" },
-      { first: "Janray", last: "Blancia", bib: "4" },
-      { first: "Viah", last: "Dumadag", bib: "5" },
-      // 🔽 CONTINUE ADDING THE REST HERE
-    ];
+// Load template image
+template.src = "assets/template.png";
 
-    /* =============================
-       TEMPLATE IMAGE
-    ============================== */
-    const templateSrc = "assets/new_template.png";
+// --- EXACT MATCH FUNCTION ---
+function exactMatch(input, list){
+  return list.find(p => p.name.toLowerCase() === input.toLowerCase()) || null;
+}
 
-    const canvas = document.getElementById("bibCanvas");
-    const ctx = canvas.getContext("2d");
-    const templateImg = new Image();
+// --- GENERATE FUNCTION ---
+function generate(){
+  const inputName = document.getElementById("nameInput").value.trim();
+  if(!inputName){ alert("Please enter your name"); return; }
 
-    templateImg.src = templateSrc;
-    templateImg.onload = () => {
-      canvas.width = templateImg.width;
-      canvas.height = templateImg.height;
-      ctx.drawImage(templateImg, 0, 0);
+  const match = exactMatch(inputName, participants);
+  const bibNumber = match ? match.bib : Math.floor(1000 + Math.random()*9000);
+  const displayName = match ? match.name.toUpperCase() : "";
+
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.style.display = "block"; // show canvas after generation
+
+  // Ensure template is loaded before drawing
+  if (!template.complete) {
+      template.onload = () => drawCanvas();
+  } else {
+      drawCanvas();
+  }
+
+  function drawCanvas(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(template,0,0,canvas.width,canvas.height);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#000"; // Black text
+
+    // BIB NUMBER
+    ctx.font = "bold 180px 'Anton', sans-serif";
+    ctx.fillText(bibNumber, canvas.width/2, canvas.height/2);
+
+    // PARTICIPANT NAME
+    ctx.font = "bold 80px 'Anton', sans-serif";
+    if(displayName) ctx.fillText(displayName, canvas.width/2, canvas.height/2 + 150);
+
+    // Setup download link
+    const downloadLink = document.getElementById("downloadLink");
+    downloadLink.style.display = "inline-block";
+
+    // Remove previous click handler to avoid duplicates
+    const newDownloadLink = downloadLink.cloneNode(true);
+    downloadLink.parentNode.replaceChild(newDownloadLink, downloadLink);
+
+    newDownloadLink.onclick = function(e){
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if(isIOS){
+        const imgData = canvas.toDataURL("image/png");
+        const w = window.open();
+        w.document.write('<img src="'+imgData+'" style="max-width:100%;height:auto;display:block;margin:20px auto;">');
+        return false; // prevent default
+      } else {
+        newDownloadLink.href = canvas.toDataURL("image/png");
+        newDownloadLink.download = `eBIB_${bibNumber}_${displayName.replace(/\s+/g,"_") || "guest"}.png`;
+      }
     };
+  }
+}
 
-    /* =============================
-       POPULATE DROPDOWN
-    ============================== */
-    const select = document.getElementById("runnerSelect");
+// Attach generate function to button
+document.getElementById("generateBtn").addEventListener("click", generate);
 
-    runners.forEach((r, i) => {
-      const opt = document.createElement("option");
-      opt.value = i;
-      opt.textContent = `${r.bib} – ${r.first} ${r.last}`;
-      select.appendChild(opt);
-    });
-
-    /* =============================
-       GENERATE BIB
-    ============================== */
-    function generateBib() {
-      const index = select.value;
-      if (index === "") return;
-
-      const r = runners[index];
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(templateImg, 0, 0);
-
-      // 🟢 BIB NUMBER (font-size 185 as requested)
-      ctx.font = "bold 185px Arial";
-      ctx.fillStyle = "black";
-      ctx.textAlign = "center";
-      ctx.fillText(r.bib, canvas.width / 2, canvas.height * 0.60);
-
-      // 🟢 NAME
-      ctx.font = "bold 60px Arial";
-      ctx.fillText(
-        `${r.first} ${r.last}`,
-        canvas.width / 2,
-        canvas.height * 0.75
-      );
-    }
-
-    /* =============================
-       DOWNLOAD
-    ============================== */
-    function downloadBib() {
-      const link = document.createElement("a");
-      link.download = "e-bib.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    }
-  </script>
+// --- VIEW BUTTON ---
+document.getElementById("viewBtn").addEventListener("click", function(){
+  const canvas = document.getElementById("canvas");
+  if(canvas.style.display === "none") return alert("Please generate your e-BIB first.");
+  
+  const imgData = canvas.toDataURL("image/png");
+  const w = window.open();
+  w.document.write('<title>Your e-BIB</title>');
+  w.document.write('<img src="'+imgData+'" style="max-width:100%;height:auto;display:block;margin:20px auto;">');
+});
+</script>
 
 </body>
 </html>
