@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SPxWC e-BIB Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    select, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+
+    canvas {
+      display: block;
+      margin: 20px auto;
+      max-width: 100%;
+      border: 1px solid #ccc;
+      background: white;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>SPxWC e-BIB Generator</h1>
+
+  <select id="runnerSelect">
+    <option value="">— Select Runner —</option>
+  </select>
+
+  <br />
+
+  <button onclick="generateBib()">Generate</button>
+  <button onclick="downloadBib()">Download</button>
+
+  <canvas id="bibCanvas"></canvas>
+
+  <script>
+    /* =============================
+       MASTERLIST (EDIT THIS ONLY)
+    ============================== */
+    const runners = [
+      { first: "Alice Cindy", last: "Trajera", bib: "1" },
+      { first: "Aljon", last: "Lodovice", bib: "2" },
+      { first: "Marc", last: "Yu", bib: "3" },
+      { first: "Janray", last: "Blancia", bib: "4" },
+      { first: "Viah", last: "Dumadag", bib: "5" },
+      // 🔽 CONTINUE ADDING THE REST HERE
+    ];
+
+    /* =============================
+       TEMPLATE IMAGE
+    ============================== */
+    const templateSrc = "assets/new_template.png";
+
+    const canvas = document.getElementById("bibCanvas");
+    const ctx = canvas.getContext("2d");
+    const templateImg = new Image();
+
+    templateImg.src = templateSrc;
+    templateImg.onload = () => {
+      canvas.width = templateImg.width;
+      canvas.height = templateImg.height;
+      ctx.drawImage(templateImg, 0, 0);
+    };
+
+    /* =============================
+       POPULATE DROPDOWN
+    ============================== */
+    const select = document.getElementById("runnerSelect");
+
+    runners.forEach((r, i) => {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = `${r.bib} – ${r.first} ${r.last}`;
+      select.appendChild(opt);
+    });
+
+    /* =============================
+       GENERATE BIB
+    ============================== */
+    function generateBib() {
+      const index = select.value;
+      if (index === "") return;
+
+      const r = runners[index];
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(templateImg, 0, 0);
+
+      // 🟢 BIB NUMBER (font-size 185 as requested)
+      ctx.font = "bold 185px Arial";
+      ctx.fillStyle = "black";
+      ctx.textAlign = "center";
+      ctx.fillText(r.bib, canvas.width / 2, canvas.height * 0.60);
+
+      // 🟢 NAME
+      ctx.font = "bold 60px Arial";
+      ctx.fillText(
+        `${r.first} ${r.last}`,
+        canvas.width / 2,
+        canvas.height * 0.75
+      );
+    }
+
+    /* =============================
+       DOWNLOAD
+    ============================== */
+    function downloadBib() {
+      const link = document.createElement("a");
+      link.download = "e-bib.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+  </script>
+
+</body>
+</html>
